@@ -3,7 +3,6 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import ReactMarkdown from 'react-markdown';
 import './App.css';
 
-// Componente do Flashcard com design moderno em Grid
 function Flashcard({ question, answer, index }) {
   const [flipped, setFlipped] = useState(false);
 
@@ -23,11 +22,9 @@ function Flashcard({ question, answer, index }) {
         minHeight: '200px',
         position: 'relative'
       }}
-      // Efeito sutil ao passar o mouse (simulado com estilo inline estático para o React básico)
       onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1)'}
       onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)'}
     >
-      {/* Cabeçalho do Card: Tag + Número */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <span style={{ 
           color: flipped ? '#10b981' : '#3b82f6', 
@@ -43,7 +40,6 @@ function Flashcard({ question, answer, index }) {
         </span>
       </div>
 
-      {/* Corpo do Card (Gira dependendo do estado) */}
       {!flipped ? (
         <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ color: '#0f172a', fontSize: '1.15rem', margin: '0 0 15px 0', lineHeight: '1.5', fontWeight: '700' }}>
@@ -117,22 +113,18 @@ function App() {
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
       const promptSistema = `
-        Atue como um professor universitário e especialista em criação de Flashcards para recuperação ativa.
-        Sua missão é realizar uma EXTRAÇÃO EXAUSTIVA do documento fornecido e criar o MÁXIMO POSSÍVEL de flashcards. 
+        Atue como um professor universitário e criador de Flashcards de alto rendimento.
+        Sua missão é extrair os conceitos do documento, mas com FOCO ABSOLUTO NA CONSOLIDAÇÃO DOS DADOS.
 
-        DIRETRIZES CRÍTICAS:
-        1. COBERTURA TOTAL (100%): Crie flashcards para absolutamente TODOS os conceitos, sintomas, critérios diagnósticos, tratamentos e pegadinhas de prova.
-        2. PRINCÍPIO DA INFORMAÇÃO MÍNIMA: Quebre informações complexas em flashcards curtos.
-        3. ORDEM CRONOLÓGICA: Siga exatamente a ordem de aparição dos assuntos no texto original.
+        DIRETRIZES CRÍTICAS ANTI-REPETIÇÃO:
+        1. FUSÃO DE CONTEÚDO: O material fornecido possui colunas de "Perguntas e Respostas" e tabelas de resumo (ex: "In a nutshell") que REPETEM o que já foi dito no texto principal. Você DEVE mesclar essas informações.
+        2. UMA PERGUNTA POR CONCEITO: Se você já criou um flashcard sobre o "Padrão Ouro para Diagnóstico" na página 2, NÃO crie outro quando ler isso de novo na tabela da página 17. 
+        3. NUNCA faça o ciclo reverso. (Ex: Se já perguntou "Qual o sintoma de X? R: Y", NÃO crie um card "Y é sintoma de qual doença? R: X").
+        4. O objetivo é testar todos os conhecimentos (exaustão temática), mas com o MENOR NÚMERO de cartas possíveis (máxima eficiência). Agrupe conceitos correlatos em uma única resposta.
 
-        FORMATO OBRIGATÓRIO E ESTRITO:
-        Use a sigla "Q:" para a pergunta, "A:" para a resposta, e separe cada card com "===" (três sinais de igual).
-
-        Q: [Sua pergunta aqui]
-        A: [Sua resposta direta aqui]
-        ===
-        Q: [Sua próxima pergunta aqui]
-        A: [Sua próxima resposta aqui]
+        FORMATO OBRIGATÓRIO:
+        Q: [Sua pergunta direta]
+        A: [Sua resposta consolidada]
         ===
 
         TEXTO PARA ANÁLISE:
@@ -143,24 +135,39 @@ function App() {
       const textResponse = apiResult.response.text();
       
       const rawCards = textResponse.split('===');
-      const parsedCards = rawCards.map(cardStr => {
+      
+      // ALGORITMO ANTI-REPETIÇÃO (Javascript puro)
+      const uniqueCards = [];
+      const seenQuestions = new Set(); // Guarda as perguntas já feitas para comparar
+
+      rawCards.forEach(cardStr => {
         const qMatch = cardStr.match(/Q:\s*([\s\S]*?)(?=A:|$)/);
         const aMatch = cardStr.match(/A:\s*([\s\S]*?)$/);
         
         if (qMatch && aMatch) {
-          return {
-            question: qMatch[1].trim(),
-            answer: aMatch[1].trim()
-          };
-        }
-        return null;
-      }).filter(Boolean);
+          const rawQuestion = qMatch[1].trim();
+          const answer = aMatch[1].trim();
+          
+          // "Limpa" a pergunta para facilitar a comparação (tira acentos, pontuação e letras maiúsculas)
+          const normalizedQuestion = rawQuestion
+            .toLowerCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // remove acentos
+            .replace(/[^\w\s]/gi, '') // remove pontuação
+            .trim();
 
-      if (parsedCards.length === 0) {
+          // Se essa pergunta já passou por aqui, nós ignoramos e não colocamos na tela!
+          if (!seenQuestions.has(normalizedQuestion) && rawQuestion.length > 5) {
+            seenQuestions.add(normalizedQuestion);
+            uniqueCards.push({ question: rawQuestion, answer: answer });
+          }
+        }
+      });
+
+      if (uniqueCards.length === 0) {
         throw new Error("A IA não retornou o formato de flashcards esperado.");
       }
 
-      setFlashcards(parsedCards);
+      setFlashcards(uniqueCards);
     } catch (err) {
       console.error(err);
       setError(`Falha na API: ${err.message}`);
@@ -169,10 +176,9 @@ function App() {
     }
   };
 
-  // Layout Expandido para acomodar o Grid
   const styles = {
     page: { minHeight: '100vh', width: '100vw', backgroundColor: '#f8fafc', padding: '40px 5%', fontFamily: '"Inter", "Segoe UI", sans-serif', color: '#0f172a', boxSizing: 'border-box', position: 'absolute', top: 0, left: 0 },
-    container: { width: '100%', maxWidth: '1400px', margin: '0 auto', boxSizing: 'border-box' }, // MaxWidth aumentado para caber mais quadradinhos
+    container: { width: '100%', maxWidth: '1400px', margin: '0 auto', boxSizing: 'border-box' },
     headerText: { textAlign: 'center', color: '#2563eb', fontSize: '2.5rem', marginBottom: '10px', fontWeight: '800' },
     subText: { textAlign: 'center', color: '#475569', fontSize: '1.1rem', marginBottom: '40px' },
     card: { backgroundColor: '#ffffff', borderRadius: '16px', padding: '32px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', marginBottom: '30px', width: '100%', maxWidth: '800px', margin: '0 auto 40px auto', boxSizing: 'border-box' },
@@ -183,13 +189,7 @@ function App() {
     fileNameItem: { display: 'inline-block', marginTop: '15px', padding: '8px 16px', backgroundColor: '#dcfce3', color: '#166534', borderRadius: '9999px', fontSize: '0.9rem', fontWeight: '600' },
     button: { width: '100%', padding: '14px 24px', fontSize: '1.1rem', cursor: loading ? 'not-allowed' : 'pointer', backgroundColor: loading ? '#94a3b8' : '#2563eb', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: 'bold', boxShadow: loading ? 'none' : '0 4px 6px rgba(37, 99, 235, 0.3)', marginTop: '25px' },
     errorBox: { backgroundColor: '#fef2f2', borderLeft: '4px solid #ef4444', color: '#991b1b', padding: '16px', borderRadius: '0 8px 8px 0', marginTop: '20px' },
-    // O grande segredo do visual lado a lado está aqui:
-    gridContainer: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-      gap: '24px',
-      alignItems: 'stretch'
-    }
+    gridContainer: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px', alignItems: 'stretch' }
   };
 
   return (
@@ -197,7 +197,7 @@ function App() {
       <div style={styles.container}>
         
         <h1 style={styles.headerText}>⚡ Flashcards Inteligentes</h1>
-        <p style={styles.subText}>Extração exaustiva para recuperação ativa do seu material.</p>
+        <p style={styles.subText}>Extração avançada e consolidada. Zero repetições.</p>
 
         <div style={styles.card}>
           <div>
@@ -225,13 +225,12 @@ function App() {
           {error && <div style={styles.errorBox}><b>Atenção:</b> {error}</div>}
 
           <button onClick={analyzeText} disabled={loading} style={styles.button}>
-            {loading ? 'Minerando dados do texto... ⏳' : 'Extrair e Gerar Flashcards 🚀'}
+            {loading ? 'Consolidando dados e filtrando duplicatas... ⏳' : 'Extrair Flashcards 🚀'}
           </button>
         </div>
 
         {flashcards.length > 0 && (
           <div>
-            {/* Título da seção de visualização de dados parecido com a sua imagem */}
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px', color: '#0f172a', borderBottom: '2px solid #e2e8f0', paddingBottom: '16px' }}>
               <span style={{ fontSize: '1.5rem', marginRight: '10px' }}>📑</span>
               <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '800' }}>Pré-visualização dos Dados</h2>
@@ -240,7 +239,6 @@ function App() {
               </span>
             </div>
             
-            {/* O Container em GRID mágico */}
             <div style={styles.gridContainer}>
               {flashcards.map((card, index) => (
                 <Flashcard key={index} index={index} question={card.question} answer={card.answer} />

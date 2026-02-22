@@ -56,13 +56,11 @@ function Flashcard({ question, answer, index }) {
           </p>
         </div>
       ) : (
-        <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ color: '#334155', fontSize: '1.05rem', lineHeight: '1.6', flexGrow: 1 }}>
+        <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <div style={{ color: '#334155', fontSize: '1.2rem', lineHeight: '1.5', textAlign: 'center', fontWeight: '500' }}>
             <ReactMarkdown
                components={{
-                 p: ({node, ...props}) => <p style={{ margin: '0 0 10px 0' }} {...props} />,
-                 ul: ({node, ...props}) => <ul style={{ paddingLeft: '20px', margin: '0 0 10px 0' }} {...props} />,
-                 li: ({node, ...props}) => <li style={{ marginBottom: '5px' }} {...props} />,
+                 p: ({node, ...props}) => <p style={{ margin: 0 }} {...props} />,
                  strong: ({node, ...props}) => <strong style={{ color: '#0f172a', fontWeight: '800', backgroundColor: '#fef08a', padding: '2px 4px', borderRadius: '4px' }} {...props} />,
                }}
             >
@@ -162,24 +160,11 @@ function App() {
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
       const promptSistema = `
-        Atue como um especialista em neuroeducação e caçador de mnemônicos de altíssimo nível.
-        Sua única missão é vasculhar o texto fornecido e extrair TODOS os truques, macetes, associações e mnemônicos.
-        
-        MUITA ATENÇÃO AO SEGUINTE:
-        1. Mnemônicos escondidos na ortografia.
-        2. Gatilhos de exclusão.
-        3. Associações visuais bizarras ou cotidianas.
-
-        Categorize sua busca em:
-        1. Mnemônicos de Letras e Siglas.
-        2. Associações Visuais e Sensoriais.
-        3. Fórmulas de Diagnóstico/Raciocínio.
-        4. Alertas e Pegadinhas de Prova.
-
+        Atue como um especialista em neuroeducação e caçador de mnemônicos.
+        Extraia truques, macetes, associações e mnemônicos escondidos na ortografia, gatilhos de exclusão e associações visuais bizarras.
+        Categorize em: 1. Siglas, 2. Associações Visuais, 3. Raciocínio, 4. Pegadinhas.
         NÃO USE TABELAS. Use listas em bullet points.
-        
-        TEXTO PARA ANÁLISE:
-        ${fileContent}
+        TEXTO: ${fileContent}
       `;
 
       const apiResult = await model.generateContent(promptSistema);
@@ -205,21 +190,23 @@ function App() {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-      // PROMPT MÁXIMO: Exaustão granular + Mnemônicos obrigatórios + Zero repetição
+      // O NOVO PROMPT ATÔMICO COM REGRAS DE OURO + MNEMÔNICOS
       const promptSistema = `
-        Atue como um professor universitário e criador de Flashcards de altíssimo rendimento.
-        Sua missão é realizar uma EXTRAÇÃO EXAUSTIVA E MICRO-DETALHADA do texto. É estritamente proibido resumir ou pular informações.
-        
-        DIRETRIZES CRÍTICAS PARA MÁXIMO VOLUME (SEM REPETIÇÃO):
-        1. EXAUSTÃO ABSOLUTA: Para cada patologia ou tema abordado, crie flashcards separados para: Etiologia, Sintomas, Critérios Diagnósticos (padrão-ouro), Tratamento de 1ª linha, Tratamentos alternativos/gestantes, e Contraindicações. Espera-se a geração de DEZENAS de cartas para cobrir todo o PDF.
-        2. MNEMÔNICOS GARANTIDOS (MUITO IMPORTANTE): Todo macete, sigla, associação visual ou gatilho mental (ex: "Cheiro de peixe", "D e A para Clamídia") presente no texto DEVE virar um flashcard exclusivo.
-           - Formato sugerido para a pergunta: "**Mnemônico:** Como lembrar de X?"
-        3. ZERO REDUNDÂNCIA: Teste cada detalhe uma única vez. Funda informações de tabelas de resumo com o texto principal para não repetir a mesma pergunta com palavras diferentes.
-        4. ORDEM CRONOLÓGICA: Siga exatamente o fluxo do texto original.
+        Atue como um especialista em aprendizagem baseada em flashcards (Active Recall) e criador de questões para provas médicas.
+        Sua tarefa é ler o documento fornecido e gerar flashcards curtos, objetivos e ideais para revisão rápida.
 
-        FORMATO OBRIGATÓRIO (Siga exatamente, sem adicionar textos extras no começo ou fim):
-        Q: [Pergunta direta e clínica]
-        A: [Resposta focada]
+        REGRAS OBRIGATÓRIAS (CRÍTICAS):
+        1. UM CONCEITO POR CARTA: Cada flashcard deve abordar APENAS UM conceito.
+        2. RESPOSTAS CURTAS: Cada resposta deve ter NO MÁXIMO 1 frase curta ou até 15 palavras. Foco na resposta instintiva.
+        3. PROIBIDO PERGUNTAS AMPLAS: NÃO crie perguntas do tipo "descreva", "explique", "compare" ou "fale sobre".
+        4. PERGUNTAS FECHADAS: Prefira perguntas diretas ("Qual é o...", "Qual o pH...", "Qual o tratamento...").
+        5. FRAGMENTAÇÃO INTELIGENTE: Se um tema tiver múltiplos pontos, gere múltiplos flashcards curtos (um para pH, um para microscopia, etc). Não faça cartas com respostas em formato de lista longa.
+        6. MNEMÔNICOS OBRIGATÓRIOS: Você DEVE identificar macetes, dicas de prova, associações de letras ou visuais do texto e criar flashcards específicos para eles. (Exemplo: "Q: **Mnemônico:** Como lembrar a associação de Clamídia com os remédios? A: Letras D e A (Doxiciclina e Azitromicina)").
+        7. PENSE: "Isso cabe em 5 a 10 segundos de resposta?" Se sim, a carta está boa.
+
+        FORMATO OBRIGATÓRIO (Siga exatamente este padrão, separando as cartas com "==="):
+        Q: [Pergunta direta e curta]
+        A: [Resposta de até 15 palavras]
         ===
 
         TEXTO PARA ANÁLISE:
@@ -243,6 +230,7 @@ function App() {
           
           const normalizedQuestion = rawQuestion.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w\s]/gi, '').trim();
 
+          // Mantemos a trava para evitar 5 perguntas 100% idênticas, mas como as perguntas agora são específicas (ex: "Qual o pH da VB?"), elas vão passar normalmente.
           if (!seenQuestions.has(normalizedQuestion) && rawQuestion.length > 5) {
             seenQuestions.add(normalizedQuestion);
             uniqueCards.push({ question: rawQuestion, answer: answer });
@@ -269,6 +257,32 @@ function App() {
     setTimeout(() => setCopied(false), 3000);
   };
 
+  const downloadJSON = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(flashcards, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "flashcards_estudos.json");
+    document.body.appendChild(downloadAnchorNode); 
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  };
+
+  const downloadCSVForAnki = () => {
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
+    flashcards.forEach(card => {
+       let q = card.question.replace(/"/g, '""'); 
+       let a = card.answer.replace(/"/g, '""').replace(/\n/g, "<br>"); 
+       csvContent += `"${q}";"${a}"\r\n`;
+    });
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "anki_flashcards.csv");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
   const styles = {
     page: { minHeight: '100vh', width: '100vw', backgroundColor: '#f4f4f5', padding: '40px 5%', fontFamily: '"Inter", "Segoe UI", sans-serif', color: '#0f172a', boxSizing: 'border-box', position: 'absolute', top: 0, left: 0 },
     container: { width: '100%', maxWidth: '1400px', margin: '0 auto', boxSizing: 'border-box' },
@@ -286,6 +300,7 @@ function App() {
     errorBox: { backgroundColor: '#fef2f2', borderLeft: '4px solid #ef4444', color: '#991b1b', padding: '16px', borderRadius: '0 8px 8px 0', marginTop: '20px' },
     gridContainer: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px', alignItems: 'stretch' },
     resultsCard: { backgroundColor: '#ffffff', borderRadius: '16px', padding: '40px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', borderTop: '6px solid #6366f1', width: '100%', maxWidth: '1000px', margin: '0 auto', boxSizing: 'border-box' },
+    actionBtnRow: { display: 'flex', gap: '10px' }
   };
 
   return (
@@ -293,7 +308,7 @@ function App() {
       <div style={styles.container}>
         
         <h1 style={styles.headerText}>🧠 Central de Estudos IA</h1>
-        <p style={styles.subText}>Extração exaustiva de PDF: Mnemônicos e Flashcards sem repetições.</p>
+        <p style={styles.subText}>Extração de PDF: Flashcards Atômicos e Mnemônicos sem enrolação.</p>
 
         <div style={styles.card}>
           <div>
@@ -359,12 +374,23 @@ function App() {
 
         {viewMode === 'flashcards' && flashcards.length > 0 && (
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px', color: '#0f172a', borderBottom: '2px solid #e2e8f0', paddingBottom: '16px' }}>
-              <span style={{ fontSize: '1.5rem', marginRight: '10px' }}>⚡</span>
-              <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '800' }}>Flashcards para Revisão</h2>
-              <span style={{ marginLeft: 'auto', backgroundColor: '#e0f2fe', color: '#0369a1', padding: '6px 16px', borderRadius: '9999px', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                {flashcards.length} cartas geradas
-              </span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', color: '#0f172a', borderBottom: '2px solid #e2e8f0', paddingBottom: '16px', flexWrap: 'wrap', gap: '15px' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{ fontSize: '1.5rem', marginRight: '10px' }}>⚡</span>
+                <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '800' }}>Flashcards para Revisão</h2>
+                <span style={{ marginLeft: '15px', backgroundColor: '#e0f2fe', color: '#0369a1', padding: '6px 16px', borderRadius: '9999px', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                  {flashcards.length} cartas curtas
+                </span>
+              </div>
+              
+              <div style={styles.actionBtnRow}>
+                <button onClick={downloadJSON} style={{ padding: '10px 20px', backgroundColor: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  📥 Descarregar JSON
+                </button>
+                <button onClick={downloadCSVForAnki} style={{ padding: '10px 20px', backgroundColor: '#f97316', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  ⭐ Exportar p/ Anki (.csv)
+                </button>
+              </div>
             </div>
             
             <div style={styles.gridContainer}>
